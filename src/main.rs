@@ -14,15 +14,21 @@ pub fn main() -> iced::Result {
 struct App {
     screen: Screen,
     value: i64,
+    user: String,
+    pass: String,
+    nick: String,
+    msg: String,
 
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum Message {
     LoginButtonPressed,
     BackPressed,
     Increment,
     Decrement,
+    UserInput(String),
+    PassInput(String),
 }
 
 impl App {
@@ -30,7 +36,10 @@ impl App {
         ( Self {
             screen: Screen::Login,
             value: 0,
-            
+            user: String::new(),
+            pass: String::new(),
+            nick: String::new(),
+            msg: String::new(),
     
         },
         Task::none(),
@@ -40,6 +49,17 @@ impl App {
 
     fn update(&mut self, message: Message) -> Task<Message>{
         match message {
+            Message::UserInput(s) => {
+                self.user = s;
+
+                Task::none()
+
+            }
+            Message::PassInput(s) => {
+                self.pass = s;
+
+                Task::none()
+            }
             Message::BackPressed => {
                 if let Some(screen) = self.screen.previous() {
                     self.screen = screen;
@@ -106,8 +126,8 @@ impl App {
          }
     fn login(&self) -> Column<Message> {
 
-        let user_input = text_input("username", "").width(400);
-        let pass_input = text_input("password", "").width(400);
+        let user_input = text_input("username", &self.user).width(400);
+        let pass_input = text_input("password", &self.pass).width(400);
         let submit_button = button("submit").on_press(Message::LoginButtonPressed);
         let register_button = button("register_button");
         let input_controls = row![register_button,submit_button].padding(20).spacing(20);
@@ -130,8 +150,8 @@ impl App {
         ].spacing(20);
         let sidebar = column![button("sdsds"), button("sees")].spacing(20);
         let chat_controls = row![
-            text_input("Nick","").width(75),
-            text_input("message",""),
+            text_input("Nick",&self.nick).width(75),
+            text_input("message",&self.msg),
             button("Send"),
     
         ].spacing(5);
