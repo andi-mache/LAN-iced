@@ -1,9 +1,15 @@
 
+//use tokio::{io::{ AsyncBufReadExt, AsyncWriteExt, BufReader}, net::TcpStream};
+use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, net::TcpStream};
+
+
 use iced::widget::{button, column,row, container, text,text_input, Column, Button, vertical_space, horizontal_space, vertical_rule, horizontal_rule};
 use iced::{Center, Element, Task, Theme, Fill};
 use iced::widget::scrollable;
 use iced::widget::pick_list;
-pub fn main() -> iced::Result {
+
+#[tokio::main]
+async fn main() -> iced::Result {
     iced::application("LAN-chat", App::update, App::view)
         
         .theme(App::theme)
@@ -18,6 +24,7 @@ struct App {
     value: i64,
     user: String,
     pass: String,
+    add: String,
     nick: String,
     msg: String,
     chat_history: String,
@@ -35,6 +42,7 @@ enum Message {
     UserInput(String),
     PassInput(String),
     ChatInput(String),
+    NickInput(String),
    
 }
 
@@ -44,6 +52,7 @@ impl App {
             theme: Theme::Dark,
             screen: Screen::Login,
             value: 0,
+            add: String::from("127.0.0.1:8000"),
             user: String::new(),
             pass: String::new(),
             nick: String::new(),
@@ -65,6 +74,11 @@ impl App {
             }
             Message::ChatInput(s) => {
                 self.msg = s;
+
+                Task::none()
+            }
+            Message::NickInput(s) =>{
+                self.nick = s;
 
                 Task::none()
             }
@@ -134,23 +148,29 @@ impl App {
 
     }
 
-    //async fn connect_to_server(&mut self, addr: &str) -> Result<(), Box<dyn std::error::Error>> {
-    //    let socket = TcpStream::connect(addr).await?;
-    //    let (reader, writer) = socket.into_split();
-    //
-    //    tokio::spawn(async move {
-    //        let mut reader = BufReader::new(reader);
-    //        loop {
-    //            let mut buffer = String::new();
-    //            reader.read_line(&mut buffer).await.unwrap();
-    //            self.chat_history.push_str(&buffer);
-    //        }
-    //    });
-    //
-    //    self.socket = Some(writer);
-    //    Ok(())
-    //}
-    //
+    async fn connect_to_server(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let addr = "127.0.0.1:8000";
+        let socket = TcpStream::connect(addr).await?;
+        let (mut reader,mut writer) = socket.into_split();
+
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(reader);
+            loop {
+                let mut buffer = String::new();
+                reader.read_line(&mut buffer).await.unwrap();
+                self.chat_history.push_str(&buffer);
+            }
+        });
+
+        loop {
+            let  msg_snd = String::new();
+
+            //stdin().read_line(&mut msg_snd)?;
+            writer.write_all(msg_snd.as_bytes()).await?;
+        }
+        Ok(())
+    }
+
     //fn can_continue(&self) -> bool {
     //    match self.screen {
     //        Screen::Login => true,
@@ -171,7 +191,7 @@ impl App {
     fn login(&self) -> Column<Message> {
 
         let user_input = text_input("username", &self.user).width(400).on_input(Message::UserInput);
-        let pass_input = text_input("password", &self.pass).width(400);
+        let pass_input = text_input("password", &self.pass).width(400).on_input(Message::PassInput);
         let submit_button = button("submit").on_press(Message::LoginButtonPressed);
         let register_button = button("register_button");
         let input_controls = row![register_button,submit_button].padding(20).spacing(20);
@@ -202,8 +222,8 @@ impl App {
         ].spacing(20);
         let sidebar = column![button("sdsds"), button("sees")].spacing(20);
         let chat_controls = row![
-            text_input("Nick",&self.nick).width(75),
-            text_input("message",&self.msg),
+            text_input("Nick",&self.nick).width(75).on_input(Message::NickInput),
+            text_input("message",&self.msg).on_input(Message::ChatInput),
             button("Send").on_press(Message::SendMsg),    
         ].spacing(5);
         let chat_history = scrollable(text(&self.chat_history));
